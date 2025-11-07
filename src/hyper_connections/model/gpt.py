@@ -5,9 +5,9 @@ from model.transformer import Transformer
 
 
 class GPT(torch.nn.Module):
-    def __init__(self, vocab_size, dim, num_heads, num_layers, base):
+    def __init__(self, vocab_size, dim, num_heads, num_layers, base, padding_idx=None):
         super().__init__()
-        self.token_emb = torch.nn.Embedding(vocab_size, dim)
+        self.token_emb = torch.nn.Embedding(vocab_size, dim, padding_idx=padding_idx)
         self.norm_gen = lambda: torch.nn.LayerNorm(dim, bias=False)
         self.transformer = Transformer(dim, num_heads, num_layers, base, self.norm_gen)
         self.ln_f = torch.nn.LayerNorm(dim, bias=False)

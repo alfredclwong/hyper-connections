@@ -59,15 +59,16 @@ class HCTransformer(HCNet):
         blocks = torch.nn.ModuleList()
         for _ in range(num_layers):
             blocks.append(RotaryAttention(base, dim, num_heads))
-            blocks.append(MLP([dim, dim // 3 * 2, dim], SwiGLU()))
+            # blocks.append(MLP([dim, dim // 3 * 2, dim], SwiGLU()))
+            blocks.append(MLP([dim, dim * 4, dim], SwiGLU()))
         norm_gen = lambda: torch.nn.LayerNorm(dim, bias=False)
         super().__init__(blocks, norm_gen=norm_gen, expansion_rate=expansion_rate)
 
 
 class HCGPT(torch.nn.Module):
-    def __init__(self, vocab_size, dim, num_heads, num_layers, base, expansion_rate=2):
+    def __init__(self, vocab_size, dim, num_heads, num_layers, base, expansion_rate=2, padding_idx=None):
         super().__init__()
-        self.token_emb = torch.nn.Embedding(vocab_size, dim)
+        self.token_emb = torch.nn.Embedding(vocab_size, dim, padding_idx=padding_idx)
         self.transformer = HCTransformer(
             dim, num_heads, num_layers, base, expansion_rate=expansion_rate
         )

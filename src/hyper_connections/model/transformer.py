@@ -70,7 +70,8 @@ class Transformer(ResNet):
         blocks = torch.nn.ModuleList()
         for _ in range(L):
             blocks.append(RotaryAttention(R, D, H))
-            blocks.append(MLP([D, D // 3 * 4, D], SwiGLU()))
+            # blocks.append(MLP([D, D // 3 * 4, D], SwiGLU()))
+            blocks.append(MLP([D, D * 4, D], SwiGLU()))
         super().__init__(blocks, norm, pre_norm)
 
 
