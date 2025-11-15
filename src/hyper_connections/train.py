@@ -4,23 +4,31 @@ from tqdm.auto import tqdm
 import wandb
 import huggingface_hub as hf
 
-from hyper_connections.model.hc import HubHCGPT
-from hyper_connections.util import get_device, get_num_params, get_tokenizer, get_tokenized_dolma_train_dataset, get_tokenized_c4_val_dataset
-from hyper_connections.eval import eval
+from transformers import OlmoForCausalLM
 
-# %%
-token = input("Enter your Hugging Face token: ")
-hf.login(token=token)
+from hyper_connections.model.gpt import GPTConfig
+from hyper_connections.model.hc import HubHCGPT
+from hyper_connections.util import get_device, get_num_params, get_tokenizer, get_tokenized_dolma_train_dataset, get_tokenized_c4_val_dataset, get_olmo
+from hyper_connections.eval import eval
 
 # %%
 device = get_device()
 device
 
+# # %%
+# model = get_olmo(device)
+# x = torch.randint(0, model.config.vocab_size, (1, 16), device=device)
+# model.forward(x, labels=x)
+
+# # %%
+# token = input("Enter your Hugging Face token: ")
+# hf.login(token=token)
+
 # %%
 # n_tokens = int(5e9)  # 5B tokens
 n_tokens = int(5e7)
 max_seq_len = 1024
-batch_size = 8
+batch_size = 1
 val_dataset = get_tokenized_c4_val_dataset(
     tokenizer=get_tokenizer(),
     n_tokens=1024 * 512,
@@ -29,8 +37,7 @@ val_dataset = get_tokenized_c4_val_dataset(
 )
 
 # %%
-# model = HubGPT(
-model = HubHCGPT(
+model_cfg = GPTConfig(
     # vocab_size=tokenizer.vocab_size,
     vocab_size=50304,  # 128 * 393
     dim=1024,
@@ -39,12 +46,14 @@ model = HubHCGPT(
     base=10_000,
     padding_idx=1,
 )
+# model = HubGPT(model_cfg)
+model = HubHCGPT(model_cfg)
 num_params_m = get_num_params(model) // 1_000_000
 print(f"{num_params_m}M parameters.")
 model.to(device)
 
 # %%
-use_wandb = True
+use_wandb = False
 optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=1e-2, betas=(0.9, 0.95))
 n_epoch = 1
 n_checkpoint_tokens = n_tokens // 10

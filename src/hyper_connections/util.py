@@ -25,8 +25,10 @@ def get_tokenizer():
     return tokenizer
 
 
-def get_tokenized_dataset(tokenizer, n_tokens, batch_size, seq_len, **dataset_kwargs):
+def get_tokenized_dataset(tokenizer, n_tokens, batch_size, seq_len, shuffle=False, **dataset_kwargs):
     streaming_dataset = load_dataset(**dataset_kwargs)
+    if shuffle:
+        streaming_dataset = streaming_dataset.shuffle(buffer_size=10_000, seed=42)
     tokenized_dataset = TokenizedDataset(
         dataset=streaming_dataset,
         tokenizer=tokenizer,
@@ -51,6 +53,7 @@ def get_tokenized_dolma_train_dataset(tokenizer, n_tokens, batch_size, seq_len):
         n_tokens,
         batch_size,
         seq_len,
+        shuffle=True,
         **dolma_train_kwargs,
     )
 

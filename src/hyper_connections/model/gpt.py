@@ -1,20 +1,37 @@
 import torch
 import huggingface_hub as hf
+from dataclasses import dataclass
 
-from model.transformer import Transformer
+from hyper_connections.model.transformer import Transformer
+
+
+@dataclass(frozen=True)
+class GPTConfig:
+    vocab_size: int
+    dim: int
+    num_heads: int
+    num_layers: int
+    base: int | None = 10_000
+    n_ctx: int | None = None
+    padding_idx: int | None = None
 
 
 class GPT(torch.nn.Module):
-    def __init__(self, vocab_size, dim, num_heads, num_layers, base, padding_idx=None):
+    def __init__(self, config: GPTConfig):
         super().__init__()
-        self.token_emb = torch.nn.Embedding(vocab_size, dim, padding_idx=padding_idx)
-        self.norm_gen = lambda: torch.nn.LayerNorm(dim, bias=False)
-        self.transformer = Transformer(dim, num_heads, num_layers, base, self.norm_gen)
-        self.ln_f = torch.nn.LayerNorm(dim, bias=False)
-        self.head = torch.nn.Linear(dim, vocab_size, bias=False)
+        self.token_emb = torch.nn.Embedding(config.vocab_size, config.dim, padding_idx=config.padding_idx)
+        if config.base is None:
+            assert isinstance(config.n_ctx, int), "n_ctx must be provided if base is None"
+            self.pos_emb = torch.nn.Embedding(config.n_ctx, config.dim)
+        norm_gen = lambda: torch.nn.LayerNorm(config.dim, bias=False)
+        self.transformer = Transformer(config.dim, config.num_heads, config.num_layers, norm_gen, pre_norm=True, R=config.base)
+        self.ln_f = torch.nn.LayerNorm(config.dim, bias=False)
+        self.head = torch.nn.Linear(config.dim, config.vocab_size, bias=False)
 
     def forward(self, x, y=None):
         x = self.token_emb(x)
+        if hasattr(self, "pos_emb"):
+            x = x + self.pos_emb.weight[None, : x.size(1), :]
         x = self.transformer(x)
         x = self.ln_f(x)
 

@@ -3,8 +3,9 @@ import huggingface_hub as hf
 import torch
 from typing import Callable
 
-from hyper_connections.model.act import SwiGLU
-from hyper_connections.model.transformer import MLP, RotaryAttention
+from hyper_connections.model.act import SwiGLU, ReLU
+from hyper_connections.model.transformer import MLP, Attention
+from hyper_connections.model.gpt import GPTConfig
 
 
 class HCNet(torch.nn.Module):
@@ -55,25 +56,30 @@ class HCNet(torch.nn.Module):
 
 
 class HCTransformer(HCNet):
-    def __init__(self, dim, num_heads, num_layers, base, expansion_rate=2):
+    def __init__(self, D, H, L, norm_gen, pre_norm: bool = True, R: int | None = None, expansion_rate: int = 2):
         blocks = torch.nn.ModuleList()
-        for _ in range(num_layers):
-            blocks.append(RotaryAttention(base, dim, num_heads))
-            # blocks.append(MLP([dim, dim // 3 * 2, dim], SwiGLU()))
-            blocks.append(MLP([dim, dim * 4, dim], SwiGLU()))
-        norm_gen = lambda: torch.nn.LayerNorm(dim, bias=False)
-        super().__init__(blocks, norm_gen=norm_gen, expansion_rate=expansion_rate)
+        for _ in range(L):
+            blocks.append(Attention(D, H, R=R))
+            blocks.append(MLP([D, D // 3 * 8, D], SwiGLU()))
+            # blocks.append(MLP([D, D * 4, D], ReLU()))
+        super().__init__(blocks, norm_gen=norm_gen, pre_norm=pre_norm, expansion_rate=expansion_rate)
 
 
 class HCGPT(torch.nn.Module):
-    def __init__(self, vocab_size, dim, num_heads, num_layers, base, expansion_rate=2, padding_idx=None):
+    def __init__(self, config: GPTConfig, expansion_rate=2):
         super().__init__()
-        self.token_emb = torch.nn.Embedding(vocab_size, dim, padding_idx=padding_idx)
+        self.token_emb = torch.nn.Embedding(config.vocab_size, config.dim, padding_idx=config.padding_idx)
         self.transformer = HCTransformer(
-            dim, num_heads, num_layers, base, expansion_rate=expansion_rate
+            config.dim,
+            config.num_heads,
+            config.num_layers,
+            norm_gen=lambda: torch.nn.LayerNorm(config.dim, bias=False),
+            pre_norm=True,
+            R=config.base,
+            expansion_rate=expansion_rate,
         )
-        self.ln_f = torch.nn.LayerNorm(dim, bias=False)
-        self.head = torch.nn.Linear(dim, vocab_size, bias=False)
+        self.ln_f = torch.nn.LayerNorm(config.dim, bias=False)
+        self.head = torch.nn.Linear(config.dim, config.vocab_size, bias=False)
 
     def forward(self, x, y=None):
         x = self.token_emb(x)
