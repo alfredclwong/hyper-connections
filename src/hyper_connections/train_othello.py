@@ -123,7 +123,7 @@ else:
     val_steps = train_cfg.val_steps
 val_metrics = {}
 if train_cfg.use_wandb:
-    wandb.init(project="hyper-connections")
+    wandb.init(project="hyper-connections", config=cfg.__dict__ | train_cfg.__dict__)
 for epoch in range(train_cfg.n_epoch):
     model.train()
     pbar = tqdm(train_loader, desc=f"Epoch {epoch + 1}")
@@ -149,3 +149,5 @@ model.save_pretrained(f"awonga/othello-gpt-{datetime.datetime.now().strftime('%Y
 
 # %%
 view_HC(model.transformer)
+
+# %%
