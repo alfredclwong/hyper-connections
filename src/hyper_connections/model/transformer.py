@@ -8,12 +8,13 @@
 # L: number of layers
 # R: base for rotary embeddings
 # N: expansion rate
+# F: fractional dimension when N < 0
 
-import torch
 import einops
-from typing import Callable
+import torch
 
-from hyper_connections.model.act import Activation, SwiGLU, ReLU
+from hyper_connections.model.act import Activation, ReLU, SwiGLU
+from hyper_connections.model.norm import Norm
 from hyper_connections.model.rope import Rotary, apply_rotary_pos_emb
 
 
@@ -23,11 +24,11 @@ class ResNet(torch.nn.Module):
     """
 
     def __init__(
-        self, blocks: torch.nn.ModuleList, norm_gen: Callable[[], torch.nn.Module], pre_norm: bool = True
+        self, dim: int, blocks: torch.nn.ModuleList, norm: type[Norm], pre_norm: bool
     ):
         super().__init__()
         self.blocks = blocks
-        self.norms = torch.nn.ModuleList([norm_gen() for _ in range(len(blocks))])
+        self.norms = torch.nn.ModuleList([norm(dim=dim) for _ in range(len(blocks))])
         self.pre_norm = pre_norm
 
     def forward(self, x_BTD: torch.Tensor) -> torch.Tensor:
@@ -46,25 +47,30 @@ class Transformer(ResNet):
         D: int,
         H: int,
         L: int,
-        norm_gen: Callable[[], torch.nn.Module],
-        pre_norm: bool = True,
-        R: int | None = None,
+        norm: type[Norm],
+        pre_norm: bool,
+        R: int | None,
+        flash: bool,
     ):
         blocks = torch.nn.ModuleList()
         for _ in range(L):
-            blocks.append(Attention(D, H, R))
+            blocks.append(Attention(D, H, R, flash=flash))
             blocks.append(MLP([D, D * 8 // 3, D], SwiGLU()))
             # blocks.append(MLP([D, D * 4, D], ReLU()))
-        super().__init__(blocks, norm_gen, pre_norm)
+        super().__init__(dim=D, blocks=blocks, norm=norm, pre_norm=pre_norm)
 
 
 class Attention(torch.nn.Module):
-    def __init__(self, D: int, H: int, R: int | None = None, flash: bool = True):
+    def __init__(self, D: int, H: int, R: int | None, flash: bool):
         super().__init__()
         self.H = H
         self.D = D
         self.K = D // H
-        self.flash = flash
+        self.flash = (
+            flash and torch.cuda.is_available() and torch.__version__ >= "2.0.0"
+        )
+        if self.flash:
+            print("Using Flash Attention")
 
         self.rotary = None if R is None else Rotary(self.K, base=R)
         self.qkv = torch.nn.Linear(D, 3 * self.H * self.K, bias=False)
@@ -79,7 +85,7 @@ class Attention(torch.nn.Module):
             cos, sin = self.rotary(q_BTHK, seq_dim=1)
             q_BTHK, k_BTHK = apply_rotary_pos_emb(q_BTHK, k_BTHK, cos, sin)
 
-        if self.flash and torch.cuda.is_available() and torch.__version__ >= "2.0.0":
+        if self.flash:
             attn_output_BTHK = torch.nn.functional.scaled_dot_product_attention(
                 q_BTHK, k_BTHK, v_BTHK, is_causal=causal
             )
@@ -99,6 +105,7 @@ class Attention(torch.nn.Module):
         attn_output_BTD = attn_output_BTHK.reshape(B, T, D)
         output_BTD = self.out(attn_output_BTD)
         return output_BTD
+
 
 class MLP(torch.nn.Sequential):
     def __init__(self, dims: list[int], act: Activation):

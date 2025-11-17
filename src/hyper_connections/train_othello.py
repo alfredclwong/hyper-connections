@@ -8,8 +8,7 @@ from dataclasses import dataclass
 import weave
 import datetime
 
-from hyper_connections.model.hc import HubHCGPT
-from hyper_connections.model.gpt import HubGPT, GPTConfig
+from hyper_connections.model.gpt import GPTConfig, HubGPT, HubHCGPT
 from hyper_connections.util import get_device, get_num_params, view_HC
 
 # %%
@@ -145,9 +144,16 @@ for epoch in range(train_cfg.n_epoch):
             wandb.log(metrics, step=step)
 if train_cfg.use_wandb:
     wandb.finish()
-model.save_pretrained(f"awonga/othello-gpt-{datetime.datetime.now().strftime('%Y-%m-%d-%H:%M')}")
+model_name = f"othello-gpt-{datetime.datetime.now().strftime('%Y-%m-%d-%H:%M')}"
+model.save_pretrained(f"awonga/{model_name}")
 
 # %%
+model = HubHCGPT(cfg)
+state_dict = torch.load(f"awonga/{model_name}/pytorch_model.bin")
+model.load_state_dict(state_dict)
+
+# %%
+torch.set_printoptions(precision=2, sci_mode=False)
 view_HC(model.transformer)
 
 # %%

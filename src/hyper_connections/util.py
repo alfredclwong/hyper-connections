@@ -10,10 +10,16 @@ from hyper_connections.model.hc import HCNet
 def view_HC(model: HCNet):
     L = len(model.blocks)
     N = model.n
-    HC = torch.zeros(L, N + 1, N + 1)
-    HC[:, [0], 1:] = model.B.detach().cpu()
-    HC[:, 1:, [0]] = model.A_m.detach().cpu()
-    HC[:, 1:, 1:] = model.A_r.detach().cpu()
+    if N > 0:
+        HC = torch.zeros(L, N + 1, N + 1)
+        HC[:, [0], 1:] = model.B.detach().cpu()
+        HC[:, 1:, [0]] = model.A_m.detach().cpu()
+        HC[:, 1:, 1:] = model.A_r.detach().cpu()
+    else:
+        HC = torch.zeros(L, -N + 1, -N * 2)
+        HC[:, [0], -N:] = model.B.detach().cpu()
+        HC[:, 1:, :-N] = model.A_m.detach().cpu()
+        HC[:, 1:, -N:] = model.A_r.detach().cpu()
     return HC
 
 
