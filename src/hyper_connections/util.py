@@ -10,6 +10,14 @@ def get_num_params(model: torch.nn.Module) -> int:
     return sum(p.numel() for p in model.parameters())
 
 
+def estimate_max_memory_usage(model: torch.nn.Module, batch_size: int) -> float:
+    num_params = get_num_params(model)
+    bytes_per_param = 4  # assuming float32
+    multiplier = 4  # params, gradients, optimizer states (momentum, variance)
+    mb = batch_size * num_params * bytes_per_param * multiplier / (1024**2)
+    return mb
+
+
 def get_device():
     return (
         "mps"

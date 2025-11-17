@@ -1,3 +1,14 @@
+"""
+Rental GPU checklist:
+- hf auth login
+- wandb login
+- batch_size
+- use_wandb = True
+- save_pretrained push_to_hub=True
+- flash = True
+- run with &
+"""
+
 # %%
 import torch
 from tqdm.auto import tqdm
@@ -6,9 +17,9 @@ import huggingface_hub as hf
 
 from transformers import OlmoForCausalLM
 
-from hyper_connections.model.gpt import GPTConfig
+from hyper_connections.model.gpt import GPTConfig, HubGPT
 from hyper_connections.model.hc import HubHCGPT
-from hyper_connections.util import get_device, get_num_params, get_tokenizer, get_tokenized_dolma_train_dataset, get_tokenized_c4_val_dataset, get_olmo
+from hyper_connections.util import get_device, get_num_params, get_tokenizer, get_tokenized_dolma_train_dataset, get_tokenized_c4_val_dataset, get_olmo, estimate_max_memory_usage
 from hyper_connections.eval import eval
 
 # %%
@@ -47,17 +58,21 @@ model_cfg = GPTConfig(
     padding_idx=1,
 )
 # model = HubGPT(model_cfg)
-model = HubHCGPT(model_cfg)
+model = HubHCGPT(model_cfg, dynamic=False)
 num_params_m = get_num_params(model) // 1_000_000
 print(f"{num_params_m}M parameters.")
 model.to(device)
 
 # %%
+mem_usage_mb = estimate_max_memory_usage(model, batch_size=4)
+print(f"Estimated max memory usage: {mem_usage_mb:.2f} MB")
+
+# %%
 use_wandb = False
-optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=1e-2, betas=(0.9, 0.95))
+optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0)
 n_epoch = 1
-n_checkpoint_tokens = n_tokens // 10
-n_eval_tokens = n_tokens // 25
+n_checkpoint_tokens = n_epoch * n_tokens // 10
+n_eval_tokens = n_epoch * n_tokens // 25
 next_checkpoint_tokens = n_checkpoint_tokens
 next_eval_tokens = n_eval_tokens
 if use_wandb:

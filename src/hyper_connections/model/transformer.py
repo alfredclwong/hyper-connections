@@ -57,17 +57,18 @@ class Transformer(ResNet):
 
 
 class Attention(torch.nn.Module):
-    def __init__(self, D: int, H: int, R: int | None = None):
+    def __init__(self, D: int, H: int, R: int | None = None, flash: bool = True):
         super().__init__()
         self.H = H
         self.D = D
         self.K = D // H
+        self.flash = flash
 
         self.rotary = None if R is None else Rotary(self.K, base=R)
         self.qkv = torch.nn.Linear(D, 3 * self.H * self.K, bias=False)
         self.out = torch.nn.Linear(self.D, D, bias=False)
 
-    def forward(self, x_BND: torch.Tensor, causal: bool = True, flash: bool = False) -> torch.Tensor:
+    def forward(self, x_BND: torch.Tensor, causal: bool = True) -> torch.Tensor:
         B, N, D = x_BND.shape
 
         qkv_BNHK = self.qkv(x_BND).view(B, N, 3, self.H, self.K)
@@ -77,7 +78,7 @@ class Attention(torch.nn.Module):
             cos, sin = self.rotary(q_BNHK, seq_dim=1)
             q_BNHK, k_BNHK = apply_rotary_pos_emb(q_BNHK, k_BNHK, cos, sin)
 
-        if flash and torch.cuda.is_available() and torch.__version__ >= "2.0.0":
+        if self.flash and torch.cuda.is_available() and torch.__version__ >= "2.0.0":
             attn_output_BNHK = torch.nn.functional.scaled_dot_product_attention(
                 q_BNHK, k_BNHK, v_BNHK, is_causal=causal
             )
