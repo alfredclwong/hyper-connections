@@ -4,6 +4,17 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from hyper_connections.data.token_stream import TokenizedDataset
 from hyper_connections.model.gpt import HubGPT
+from hyper_connections.model.hc import HCNet
+
+
+def view_HC(model: HCNet):
+    L = len(model.blocks)
+    N = model.n
+    HC = torch.zeros(L, N + 1, N + 1)
+    HC[:, [0], 1:] = model.B.detach().cpu()
+    HC[:, 1:, [0]] = model.A_m.detach().cpu()
+    HC[:, 1:, 1:] = model.A_r.detach().cpu()
+    return HC
 
 
 def get_num_params(model: torch.nn.Module) -> int:

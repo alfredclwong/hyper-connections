@@ -56,9 +56,11 @@ model_cfg = GPTConfig(
     num_layers=12,
     base=10_000,
     padding_idx=1,
+    expansion_rate=2,
+    dynamic=True,
 )
 # model = HubGPT(model_cfg)
-model = HubHCGPT(model_cfg, dynamic=False)
+model = HubHCGPT(model_cfg)
 num_params_m = get_num_params(model) // 1_000_000
 print(f"{num_params_m}M parameters.")
 model.to(device)

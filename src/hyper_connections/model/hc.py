@@ -18,31 +18,47 @@ class HCNet(torch.nn.Module):
         self.pre_norm = pre_norm
         self.dynamic = dynamic
 
-        self.A_m = torch.nn.ParameterList(
-            torch.eye(self.n)[:, [i % self.n]] for i in range(self.num_blocks)
+        self.A_m = torch.nn.Parameter(
+            torch.stack(
+                [torch.eye(self.n)[:, [i % self.n]] for i in range(self.num_blocks)]
+            )
         )
-        self.A_r = torch.nn.ParameterList(
-            torch.eye(self.n) for _ in range(self.num_blocks)
+        self.A_r = torch.nn.Parameter(
+            torch.stack(
+                [torch.eye(self.n) for _ in range(self.num_blocks)]
+            )
         )
-        self.B = torch.nn.ParameterList(
-            torch.ones(1, self.n) for _ in range(self.num_blocks)
+        self.B = torch.nn.Parameter(
+            torch.stack(
+                [torch.ones(1, self.n) for _ in range(self.num_blocks)]
+            )
         )
 
         if self.dynamic:
-            self.W_m = torch.nn.ParameterList(
-                torch.zeros(dim, 1) for _ in range(self.num_blocks)
+            self.W_m = torch.nn.Parameter(
+                torch.stack(
+                    [torch.zeros(dim, 1) for _ in range(self.num_blocks)]
+                )
             )
-            self.W_r = torch.nn.ParameterList(
-                torch.zeros(dim, self.n) for _ in range(self.num_blocks)
+            self.W_r = torch.nn.Parameter(
+                torch.stack(
+                    [torch.zeros(dim, self.n) for _ in range(self.num_blocks)]
+                )
             )
-            self.W_b = torch.nn.ParameterList(
-                torch.zeros(dim, self.n) for _ in range(self.num_blocks)
+            self.W_b = torch.nn.Parameter(
+                torch.stack(
+                    [torch.zeros(dim, self.n) for _ in range(self.num_blocks)]
+                )
             )
-            self.s_a = torch.nn.ParameterList(
-                torch.ones(1, 1) * 0.01 for _ in range(self.num_blocks)
+            self.s_a = torch.nn.Parameter(
+                torch.stack(
+                    [torch.ones(1, 1) * 0.01 for _ in range(self.num_blocks)]
+                )
             )
-            self.s_b = torch.nn.ParameterList(
-                torch.ones(1, 1) * 0.01 for _ in range(self.num_blocks)
+            self.s_b = torch.nn.Parameter(
+                torch.stack(
+                    [torch.ones(1, 1) * 0.01 for _ in range(self.num_blocks)]
+                )
             )
             self.dynamic_norms = torch.nn.ModuleList(
                 torch.nn.LayerNorm(dim, bias=False) for _ in range(self.num_blocks)
@@ -97,7 +113,7 @@ class HCTransformer(HCNet):
         blocks = torch.nn.ModuleList()
         for _ in range(L):
             blocks.append(Attention(D, H, R=R))
-            blocks.append(MLP([D, D // 3 * 8, D], SwiGLU()))
+            blocks.append(MLP([D, D * 8 // 3, D], SwiGLU()))
             # blocks.append(MLP([D, D * 4, D], ReLU()))
         super().__init__(D, blocks, norm_gen=norm_gen, pre_norm=pre_norm, expansion_rate=expansion_rate, dynamic=dynamic)
 

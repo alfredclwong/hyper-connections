@@ -14,6 +14,8 @@ class GPTConfig:
     base: int | None = 10_000
     n_ctx: int | None = None
     padding_idx: int | None = None
+    expansion_rate: int = 2
+    dynamic: bool = False
 
 
 class GPT(torch.nn.Module):

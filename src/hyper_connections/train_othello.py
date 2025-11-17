@@ -6,10 +6,11 @@ import huggingface_hub as hf
 from datasets import load_dataset
 from dataclasses import dataclass
 import weave
+import datetime
 
 from hyper_connections.model.hc import HubHCGPT
 from hyper_connections.model.gpt import HubGPT, GPTConfig
-from hyper_connections.util import get_device, get_num_params
+from hyper_connections.util import get_device, get_num_params, view_HC
 
 # %%
 device = get_device()
@@ -18,11 +19,11 @@ device
 # %%
 @dataclass(frozen=True)
 class TrainConfig:
-    n_epoch: int = 2
+    n_epoch: int = 4
     n_train: int = 1_500_000
     n_val: int = 10_000
     lr: float = 1e-3
-    weight_decay: float = 1e-3
+    weight_decay: float = 0
     betas: tuple[float, float] = (0.9, 0.999)
     use_wandb: bool = True
     val_steps: int | float = 0.1
@@ -101,53 +102,18 @@ cfg = GPTConfig(
     num_layers=3,
     base=100,
     # n_ctx=31,
+    expansion_rate=2,
+    dynamic=True,
 )
-model = HubGPT(cfg)
-num_params = get_num_params(model)
-print(f"{num_params} parameters.")
-model.to(device)
-
-# %%
-optimizer = torch.optim.AdamW(model.parameters(), lr=train_cfg.lr, weight_decay=train_cfg.weight_decay, betas=train_cfg.betas)
-step = 0
-if isinstance(train_cfg.val_steps, float):
-    assert isinstance(train_loader.batch_size, int)
-    val_steps = train_cfg.val_steps * train_cfg.n_train // train_loader.batch_size
-else:
-    val_steps = train_cfg.val_steps
-val_metrics = {}
-if train_cfg.use_wandb:
-    wandb.init(project="hyper-connections")
-for epoch in range(train_cfg.n_epoch):
-    model.train()
-    pbar = tqdm(train_loader, desc=f"Epoch {epoch + 1}")
-    for batch in pbar:
-        x = batch["input_id"].to(device)
-        logits, loss = model(x[:, :-1], x[:, 1:])
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        step += 1
-
-        metrics = {"train/loss": loss.item()}
-        if step % val_steps == 0:
-            val_metrics = eval(model, val_loader)
-            metrics.update(val_metrics)
-
-        pbar.set_postfix(metrics | val_metrics | {"step": step})
-        if train_cfg.use_wandb:
-            wandb.log(metrics, step=step)
-if train_cfg.use_wandb:
-    wandb.finish()
-model.save_pretrained("awonga/othello-gpt-swiglu")
-
-# %%
 model = HubHCGPT(cfg)
 num_params = get_num_params(model)
 print(f"{num_params} parameters.")
 model.to(device)
 
 # %%
+view_HC(model.transformer)
+
+# %%
 optimizer = torch.optim.AdamW(model.parameters(), lr=train_cfg.lr, weight_decay=train_cfg.weight_decay, betas=train_cfg.betas)
 step = 0
 if isinstance(train_cfg.val_steps, float):
@@ -179,15 +145,7 @@ for epoch in range(train_cfg.n_epoch):
             wandb.log(metrics, step=step)
 if train_cfg.use_wandb:
     wandb.finish()
-model.save_pretrained("awonga/othello-gpt-hc-swiglu")
+model.save_pretrained(f"awonga/othello-gpt-{datetime.datetime.now().strftime('%Y-%m-%d-%H:%M')}")
 
 # %%
-[x for x in model.transformer.A_m]
-
-# %%
-[x for x in model.transformer.A_r]
-
-# %%
-[x for x in model.transformer.B]
-
-# %%
+view_HC(model.transformer)
