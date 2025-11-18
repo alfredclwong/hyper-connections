@@ -95,7 +95,7 @@ def get_tokenized_dataset(
     return tokenized_dataset
 
 
-def get_tokenized_dolma_train_dataset(tokenizer, n_tokens, batch_size, seq_len):
+def get_tokenized_dolma_train_dataset(tokenizer, n_tokens, batch_size, seq_len, shuffle=True):
     dolma_train_kwargs = {
         "path": "allenai/dolma",
         "name": "v1_5-sample",
@@ -108,7 +108,7 @@ def get_tokenized_dolma_train_dataset(tokenizer, n_tokens, batch_size, seq_len):
         n_tokens,
         batch_size,
         seq_len,
-        shuffle=False,
+        shuffle=shuffle,
         **dolma_train_kwargs,
     )
 

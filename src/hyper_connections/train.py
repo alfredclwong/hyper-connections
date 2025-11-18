@@ -39,6 +39,7 @@ device
 @dataclass(frozen=True)
 class TrainConfig:
     n_tokens: int = int(5e7)
+    shuffle: bool = True
     max_seq_len: int = 1024
     batch_size: int = 1
     val_n_tokens: int = 1024 * 512
@@ -108,6 +109,7 @@ for i in range(train_cfg.n_epoch):
         n_tokens=train_cfg.n_tokens,
         batch_size=train_cfg.batch_size,
         seq_len=train_cfg.max_seq_len,
+        shuffle=train_cfg.shuffle,
     )
     pbar = tqdm(train_dataset)
     for input_ids in pbar:

@@ -101,8 +101,8 @@ cfg = GPTConfig(
     num_layers=3,
     base=100,
     # n_ctx=31,
-    expansion_rate=2,
-    dynamic=True,
+    expansion_rate=1,
+    dynamic=False,
 )
 model = HubHCGPT(cfg)
 num_params = get_num_params(model)
@@ -155,5 +155,8 @@ model.load_state_dict(state_dict)
 # %%
 torch.set_printoptions(precision=2, sci_mode=False)
 view_HC(model.transformer)
+
+# %%
+model.transformer.s_a, model.transformer.s_b
 
 # %%
