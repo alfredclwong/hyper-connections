@@ -11,20 +11,23 @@ Rental GPU checklist:
 
 # %%
 from dataclasses import dataclass
+from datetime import datetime
 
 import torch
 import wandb
 from tqdm.auto import tqdm
 
+from hyper_connections.data.token_stream import (
+    get_tokenized_c4_val_dataset,
+    get_tokenized_dolma_train_dataset,
+    get_tokenizer,
+)
 from hyper_connections.eval import eval
 from hyper_connections.model.gpt import GPTConfig, HubGPT, HubHCGPT
 from hyper_connections.util import (
     estimate_max_memory_usage,
     get_device,
     get_num_params,
-    get_tokenized_c4_val_dataset,
-    get_tokenized_dolma_train_dataset,
-    get_tokenizer,
 )
 
 # %%
@@ -142,10 +145,12 @@ for i in range(train_cfg.n_epoch):
             next_checkpoint_tokens += n_checkpoint_tokens
             n_tokens_seen_m = n_tokens_seen // 1_000_000
             model.save_pretrained(
-                f"awonga/{model.__class__.__name__}-{num_params_m}M-{n_tokens_seen_m}Mtok"
+                f"awonga/{model.__class__.__name__}-{num_params_m}M-{n_tokens_seen_m}Mtok-{datetime.now().strftime('%Y%m%d%H%M')}",
             )
+n_tokens_seen_m = n_tokens_seen // 1_000_000
 model.save_pretrained(
-    f"awonga/{model.__class__.__name__}-{num_params_m}M-final", push_to_hub=True
+    f"awonga/{model.__class__.__name__}-{num_params_m}M-{n_tokens_seen_m}Mtok-{datetime.now().strftime('%Y%m%d%H%M')}",
+    push_to_hub=True,
 )
 
 if train_cfg.use_wandb:
