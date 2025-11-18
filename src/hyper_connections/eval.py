@@ -1,8 +1,7 @@
 import torch
 from tqdm.auto import tqdm
 
-from hyper_connections.model.gpt import GPT
-from hyper_connections.model.hc import HCGPT
+from hyper_connections.model.gpt import GPT, HCGPT
 
 
 @torch.no_grad()

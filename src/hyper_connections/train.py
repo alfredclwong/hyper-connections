@@ -17,8 +17,7 @@ import wandb
 from tqdm.auto import tqdm
 
 from hyper_connections.eval import eval
-from hyper_connections.model.gpt import GPTConfig, HubGPT
-from hyper_connections.model.hc import HubHCGPT
+from hyper_connections.model.gpt import GPTConfig, HubGPT, HubHCGPT
 from hyper_connections.util import (
     estimate_max_memory_usage,
     get_device,
