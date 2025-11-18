@@ -44,6 +44,7 @@ class TrainConfig:
     batch_size: int = 1
     val_n_tokens: int = 1024 * 512
     val_batch_size: int = 1
+    val_shuffle: bool = True
     n_epoch: int = 1
     lr: float = 3e-4
     weight_decay: float = 0
@@ -59,6 +60,7 @@ val_dataset = get_tokenized_c4_val_dataset(
     n_tokens=train_cfg.val_n_tokens,
     batch_size=train_cfg.val_batch_size,
     seq_len=train_cfg.max_seq_len,
+    shuffle=train_cfg.val_shuffle,
 )
 
 # %%

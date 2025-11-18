@@ -113,7 +113,7 @@ def get_tokenized_dolma_train_dataset(tokenizer, n_tokens, batch_size, seq_len, 
     )
 
 
-def get_tokenized_c4_val_dataset(tokenizer, n_tokens, batch_size, seq_len):
+def get_tokenized_c4_val_dataset(tokenizer, n_tokens, batch_size, seq_len, shuffle=True):
     c4_val_kwargs = {
         "path": "allenai/c4",
         "name": "en",
@@ -126,5 +126,6 @@ def get_tokenized_c4_val_dataset(tokenizer, n_tokens, batch_size, seq_len):
         n_tokens,
         batch_size,
         seq_len,
+        shuffle=shuffle,
         **c4_val_kwargs,
     )
